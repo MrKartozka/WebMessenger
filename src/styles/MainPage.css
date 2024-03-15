@@ -1,0 +1,38 @@
+.container {
+    display: flex;
+}
+
+.sidebar {
+    flex: 0 0 300px;
+    border-right: 1px solid #ddd;
+    padding: 20px;
+}
+
+.profile {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.user-list {
+    overflow-y: auto;
+    height: calc(100vh - 100px);
+}
+
+.chat-area {
+    flex-grow: 1;
+    padding: 20px;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.message-input {
+    position: fixed;
+    bottom: 0;
+    left: 300px;
+    width: calc(100% - 300px);
+    padding: 10px;
+    background: white;
+    border-top: 1px solid #ddd;
+}
