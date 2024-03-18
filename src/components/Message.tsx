@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { io } from "socket.io-client";
 
-// const SERVER_URL = "http://localhost:5000";
 const socket = io("http://localhost:5000");
 
 interface MessageProps {
@@ -19,6 +18,9 @@ const Message: React.FC<MessageProps> = ({
     createdAt,
     canEdit,
 }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedContent, setEditedContent] = useState(content);
+
     const handleEdit = () => {
         const newContent = prompt("Edit your message:", content);
         if (newContent && newContent !== content) {

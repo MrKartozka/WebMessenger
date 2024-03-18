@@ -10,9 +10,12 @@ import RegistrationForm from "./components/RegistrationForm";
 import UserList from "./components/UserList";
 import Chat from "./components/Chat";
 import { useParams } from "react-router-dom";
+import "./styles/MessengerLayout.css";
+import Profile from "./components/Profile";
 
 function App() {
     const [currentUser, setCurrentUser] = useState<number | null>(null);
+    const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
     console.log("Current User State:", currentUser);
 
@@ -21,20 +24,11 @@ function App() {
         setCurrentUser(userId);
     };
 
-    console.log("Current User State in App Component:", currentUser);
-
-    const ChatWithParams = () => {
-        let { userId } = useParams<{ userId: string }>();
-        console.log("Chat With User ID:", userId);
-        return userId ? (
-            <Chat
-                senderId={currentUser as number}
-                userId={parseInt(userId, 10)}
-            />
-        ) : (
-            <Navigate to="/users" replace />
-        );
+    const handleUserSelection = (userId: number) => {
+        setSelectedUserId(userId);
     };
+
+    console.log("Current User State in App Component:", currentUser);
 
     return (
         <Router>
@@ -51,19 +45,25 @@ function App() {
                     path="/users"
                     element={
                         currentUser ? (
-                            <UserList currentUser={currentUser} />
+                            <div className="messenger-layout">
+                                <aside className="sidebar">
+                                    <Profile />
+                                    <UserList
+                                        currentUser={currentUser}
+                                        onSelectUser={handleUserSelection}
+                                    />
+                                </aside>
+                                <div className="main-content">
+                                    {selectedUserId && (
+                                        <Chat
+                                            senderId={currentUser}
+                                            userId={selectedUserId}
+                                        />
+                                    )}
+                                </div>
+                            </div>
                         ) : (
                             <Navigate replace to="/login" />
-                        )
-                    }
-                />
-                <Route
-                    path="/chat/:userId"
-                    element={
-                        currentUser ? (
-                            <ChatWithParams />
-                        ) : (
-                            <Navigate to="/login" replace />
                         )
                     }
                 />

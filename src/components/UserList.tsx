@@ -12,7 +12,9 @@ interface UserListProps {
     currentUser: number;
 }
 
-const UserList: React.FC<UserListProps> = ({ currentUser }) => {
+const UserList: React.FC<
+    UserListProps & { onSelectUser: (userId: number) => void }
+> = ({ currentUser, onSelectUser }) => {
     const [users, setUsers] = useState<User[]>([]);
     const navigate = useNavigate();
 
@@ -38,7 +40,7 @@ const UserList: React.FC<UserListProps> = ({ currentUser }) => {
                 <div
                     key={user.id}
                     className="user-item"
-                    onClick={() => navigate(`/chat/${user.id}`)}
+                    onClick={() => onSelectUser(user.id)}
                 >
                     {user.username}
                 </div>

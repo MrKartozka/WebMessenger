@@ -28,10 +28,38 @@ const Chat: React.FC<ChatProps> = ({ userId, senderId }) => {
     const token = useSelector((state: RootState) => state.user.token);
     const currentUserId = useSelector((state: RootState) => state.user.userId);
     const chatSocket = io("http://localhost:5000");
+    const currentUsername = useSelector(
+        (state: RootState) => state.user.username
+    );
     const [usernames, setUsernames] = useState<{ [key: number]: string }>({});
+    const [chatPartnerNickname, setChatPartnerNickname] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
-    // const [currentUsername, setCurrentUsername] = useState("");
-    // const [chatPartnerUsername, setChatPartnerUsername] = useState("");
+    useEffect(() => {
+        const fetchChatPartnerNickname = async () => {
+            if (userId) {
+                try {
+                    const response = await axios.get(
+                        `http://localhost:5000/users/${userId}`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                            },
+                        }
+                    );
+                    setChatPartnerNickname(response.data.username);
+                } catch (error) {
+                    console.error(
+                        "Error fetching chat partner's username:",
+                        error
+                    );
+                }
+            }
+        };
+
+        fetchChatPartnerNickname();
+    }, [userId, token]);
 
     const fetchUsername = async (userId: number) => {
         if (!usernames[userId]) {
@@ -48,6 +76,12 @@ const Chat: React.FC<ChatProps> = ({ userId, senderId }) => {
             }
         }
     };
+
+    useEffect(() => {
+        if (userId) {
+            fetchUsername(userId);
+        }
+    }, [userId, senderId]);
 
     useEffect(() => {
         messages.forEach((msg) => {
@@ -68,19 +102,22 @@ const Chat: React.FC<ChatProps> = ({ userId, senderId }) => {
                 return;
             }
 
+            let url = `http://localhost:5000/chat/${userId}/${senderId}`;
+            if (startDate || endDate) {
+                url += `?startDate=${startDate}&endDate=${endDate}`;
+            }
+
             try {
-                const response = await axios.get(
-                    `http://localhost:5000/chat/${userId}/${senderId}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
+                const response = await axios.get(url, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
                 setMessages(
                     response.data.map((msg: any) => ({
                         ...msg,
                         senderId: msg.user_id,
+                        createdAt: msg.created_at,
                         isOwnMessage: msg.user_id === currentUserId,
                     }))
                 );
@@ -90,7 +127,7 @@ const Chat: React.FC<ChatProps> = ({ userId, senderId }) => {
         };
 
         fetchChatHistory();
-    }, [userId, senderId, token, currentUserId]);
+    }, [userId, senderId, token, currentUserId, startDate, endDate]);
 
     useEffect(() => {
         const chatSocket = io("http://localhost:5000");
@@ -147,6 +184,26 @@ const Chat: React.FC<ChatProps> = ({ userId, senderId }) => {
         };
     }, [currentUserId]);
 
+    const formatMessageDate = (dateString: string): string => {
+        if (!dateString || isNaN(Date.parse(dateString))) {
+            return "Invalid date";
+        }
+
+        const date = new Date(dateString);
+
+        const options: Intl.DateTimeFormatOptions = {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "Europe/Moscow",
+        };
+
+        return new Intl.DateTimeFormat("ru-RU", options).format(date);
+    };
+
     const sendMessage = () => {
         if (newMessage.trim() && currentUserId) {
             const tempId = uuidv4();
@@ -155,7 +212,7 @@ const Chat: React.FC<ChatProps> = ({ userId, senderId }) => {
                 senderId: currentUserId as number,
                 receiverId: userId as number,
                 content: newMessage,
-                createdAt: new Date().toISOString(),
+                createdAt: new Date().toLocaleString(),
             };
             chatSocket.emit("sendMessage", messageToSend);
             setMessages((prevMessages) => [
@@ -164,6 +221,7 @@ const Chat: React.FC<ChatProps> = ({ userId, senderId }) => {
                     ...messageToSend,
                     id: tempId,
                     receiverId: messageToSend.receiverId as number,
+                    isOwnMessage: true,
                 },
             ]);
             setNewMessage("");
@@ -172,21 +230,36 @@ const Chat: React.FC<ChatProps> = ({ userId, senderId }) => {
 
     return (
         <div className="chat-container">
-            <h2>Chat</h2>
+            <h2>Chat with {chatPartnerNickname || "Loading..."}</h2>
+            <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+            />
+            <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+            />
+            <button onClick={() => {}}>Filter</button>
             <div className="messages">
-                {messages.map((msg, index) => (
-                    <p
-                        key={index}
-                        className={
-                            msg.isOwnMessage ? "own-message" : "other-message"
-                        }
-                    >
-                        {msg.isOwnMessage
-                            ? "You"
-                            : usernames[msg.senderId] || "Loading..."}
-                        : {msg.content}
-                    </p>
-                ))}
+                <div className="messages">
+                    {messages.map((msg, index) => (
+                        <div
+                            key={index}
+                            className={`message ${
+                                msg.isOwnMessage
+                                    ? "own-message"
+                                    : "other-message"
+                            }`}
+                        >
+                            <small className="message-date">
+                                {formatMessageDate(msg.createdAt)}
+                            </small>
+                            <p>{msg.content}</p>
+                        </div>
+                    ))}
+                </div>
             </div>
             <input
                 className="message-input"

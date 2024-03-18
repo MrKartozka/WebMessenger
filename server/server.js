@@ -113,11 +113,28 @@ app.get('/users/:userId', async (req, res) => {
 
 app.get('/chat/:userId/:contactId', async (req, res) => {
     const { userId, contactId } = req.params;
+    const { startDate, endDate } = req.query;
+
+    let query = `
+        SELECT * FROM messages
+        WHERE ((user_id = $1 AND receiver_id = $2) OR (user_id = $2 AND receiver_id = $1))
+    `;
+    const queryParams = [userId, contactId];
+
+    if (startDate) {
+        query += ` AND created_at >= $${queryParams.length + 1}`;
+        queryParams.push(startDate);
+    }
+
+    if (endDate) {
+        query += ` AND created_at <= $${queryParams.length + 1}`;
+        queryParams.push(endDate);
+    }
+
+    query += ` ORDER BY created_at ASC`;
+
     try {
-        const chatHistory = await pool.query(
-            'SELECT * FROM messages WHERE (user_id = $1 AND receiver_id = $2) OR (user_id = $2 AND receiver_id = $1) ORDER BY created_at ASC',
-            [userId, contactId]
-        );
+        const chatHistory = await pool.query(query, queryParams);
         console.log(chatHistory.rows);
         res.json(chatHistory.rows);
     } catch (err) {
@@ -125,6 +142,7 @@ app.get('/chat/:userId/:contactId', async (req, res) => {
         res.status(500).send("Server error");
     }
 });
+
 
 app.patch('/messages/:messageId', async (req, res) => {
 });
